@@ -1,0 +1,36 @@
+{
+  "name": "sistema-fluxo-caixa",
+  "version": "1.0.0",
+  "main": "oi.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ftaricano/SISTEMA-FLUXO-DE-CAIXA.git"
+  },
+  "author": "Fernando Taricano",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ftaricano/SISTEMA-FLUXO-DE-CAIXA/issues"
+  },
+  "homepage": "https://github.com/ftaricano/SISTEMA-FLUXO-DE-CAIXA#readme",
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "body-parser": "^1.20.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "helmet": "^8.1.0",
+    "morgan": "^1.10.0",
+    "multer": "^1.4.5-lts.1",
+    "papaparse": "^5.5.2",
+    "sqlite3": "^5.1.7",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  },
+  "description": ""
+}

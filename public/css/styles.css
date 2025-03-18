@@ -1,0 +1,35 @@
+body {
+    background-color: #f8f9fa;
+  }
+  
+  .navbar {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  .card {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border: none;
+    margin-bottom: 1.5rem;
+  }
+  
+  .card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  }
+  
+  .btn {
+    border-radius: 4px;
+  }
+  
+  .categoria-cor {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    margin-right: 8px;
+  }
+  
+  .anexo-badge {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+  }

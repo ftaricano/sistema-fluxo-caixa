@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema de Fluxo de Caixa</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container">
+      <a class="navbar-brand" href="#">Fluxo de Caixa</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav me-auto">
+          <li class="nav-item">
+            <a class="nav-link active" href="#" id="nav-dashboard">Dashboard</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#" id="nav-transacoes">Transações</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#" id="nav-categorias">Categorias</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#" id="nav-importexport">Importar/Exportar</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#" id="nav-db">Banco de Dados</a>
+          </li>
+        </ul>
+        <div class="navbar-text text-light" id="user-info">
+          Usuário: Admin
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mt-4">
+    <!-- Dashboard -->
+    <div id="section-dashboard" class="content-section">
+      <div class="row mb-4">
+        <div class="col">
+          <h2>Dashboard</h2>
+          <hr>
+        </div>
+      </div>
+      
+      <div class="row mb-4">
+        <div class="col-md-4">
+          <div class="card bg-light">
+            <div class="card-body">
+              <h5 class="card-title">Saldo Atual</h5>
+              <h3 class="card-text text-primary" id="saldo-atual">R$ 0,00</h3>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card bg-light">
+            <div class="card-body">
+              <h5 class="card-title">Total de Entradas</h5>
+              <h3 class="card-text text-success" id="total-entradas">R$ 0,00</h3>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card bg-light">
+            <div class="card-body">
+              <h5 class="card-title">Total de Saídas</h5>
+              <h3 class="card-text text-danger" id="total-saidas">R$ 0,00</h3>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="row">
+        <div class="col-md-8">
+          <div class="card">
+            <div class="card-header">
+              Fluxo de Caixa - Últimos 6 Meses
+            </div>
+            <div class="card-body">
+              <canvas id="chart-fluxo"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card">
+            <div class="card-header">
+              Distribuição por Categoria
+            </div>
+            <div class="card-body">
+              <canvas id="chart-categorias"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Transações -->
+    <div id="section-transacoes" class="content-section d-none">
+      <div class="row mb-4">
+        <div class="col-md-8">
+          <h2>Transações</h2>
+        </div>
+        <div class="col-md-4 text-end">
+          <button class="btn btn-success" id="btn-nova-transacao">
+            <i class="bi bi-plus-circle"></i> Nova Transação
+          </button>
+        </div>
+        <hr>
+      </div>
+      
+      <div class="card mb-4">
+        <div class="card-header bg-light">
+          <h5>Filtros</h5>
+        </div>
+        <div class="card-body">
+          <form id="form-filtros">
+            <div class="row g-3">
+              <div class="col-md-3">
+                <label class="form-label">Data Início</label>
+                <input type="date" class="form-control" id="filtro-data-inicio">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Data Fim</label>
+                <input type="date" class="form-control" id="filtro-data-fim">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Categoria</label>
+                <select class="form-select" id="filtro-categoria">
+                  <option value="">Todas</option>
+                </select>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Tipo</label>
+                <select class="form-select" id="filtro-tipo">
+                  <option value="">Todos</option>
+                  <option value="ENTRADA">Entradas</option>
+                  <option value="SAIDA">Saídas</option>
+                </select>
+              </div>
+              <div class="col-md-9">
+                <label class="form-label">Descrição</label>
+                <input type="text" class="form-control" id="filtro-busca" placeholder="Buscar...">
+              </div>
+              <div class="col-md-3 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">
+                  <i class="bi bi-search"></i> Buscar
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">Resultados</h5>
+          <div>
+            <span class="badge bg-success me-2" id="resumo-entradas">Entradas: R$ 0,00</span>
+            <span class="badge bg-danger me-2" id="resumo-saidas">Saídas: R$ 0,00</span>
+            <span class="badge bg-primary" id="resumo-saldo">Saldo: R$ 0,00</span>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-hover">
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Descrição</th>
+                  <th>Categoria</th>
+                  <th>Valor</th>
+                  <th>Anexos</th>
+                  <th class="text-end">Ações</th>
+                </tr>
+              </thead>
+              <tbody id="tabela-transacoes">
+                <!-- Dados serão carregados via JavaScript -->
+              </tbody>
+            </table>
+          </div>
+          <div id="transacoes-vazio" class="text-center py-4 d-none">
+            <p class="text-muted mb-0">Nenhuma transação encontrada.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Categorias -->
+    <div id="section-categorias" class="content-section d-none">
+      <div class="row mb-4">
+        <div class="col-md-8">
+          <h2>Categorias</h2>
+        </div>
+        <div class="col-md-4 text-end">
+          <button class="btn btn-success" id="btn-nova-categoria">
+            <i class="bi bi-plus-circle"></i> Nova Categoria
+          </button>
+        </div>
+        <hr>
+      </div>
+      
+      <div class="card">
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-hover">
+              <thead>
+                <tr>
+                  <th>Cor</th>
+                  <th>Nome</th>
+                  <th class="text-end">Ações</th>
+                </tr>
+              </thead>
+              <tbody id="tabela-categorias">
+                <!-- Dados serão carregados via JavaScript -->
+              </tbody>
+            </table>
+          </div>
+          <div id="categorias-vazio" class="text-center py-4 d-none">
+            <p class="text-muted mb-0">Nenhuma categoria encontrada.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Importar/Exportar -->
+    <div id="section-importexport" class="content-section d-none">
+      <div class="row mb-4">
+        <div class="col">
+          <h2>Importar/Exportar</h2>
+          <hr>
+        </div>
+      </div>
+      
+      <div class="row mb-4">
+        <div class="col-md-6">
+          <div class="card h-100">
+            <div class="card-header bg-light">
+              <h5 class="mb-0">Importar Transações</h5>
+            </div>
+            <div class="card-body">
+              <form id="form-importar">
+                <div class="mb-3">
+                  <label class="form-label">Arquivo (Excel ou CSV)</label>
+                  <input type="file" class="form-control" id="arquivo-importacao" accept=".xlsx,.xls,.csv">
+                  <div class="form-text">O arquivo deve conter pelo menos colunas para data, descrição e valor.</div>
+                </div>
+                
+                <div id="mapeamento-container" class="mb-3 d-none">
+                  <h6>Mapeamento de Colunas</h6>
+                  <div class="row g-2" id="campos-mapeamento">
+                    <!-- Será preenchido via JavaScript -->
+                  </div>
+                </div>
+                
+                <div class="d-grid">
+                  <button type="submit" class="btn btn-primary" id="btn-importar">
+                    <i class="bi bi-upload"></i> Importar
+                  </button>
+                </div>
+              </form>
+              
+              <div id="resultado-importacao" class="mt-3 d-none">
+                <div class="alert alert-success">
+                  <h6>Importação concluída</h6>
+                  <p id="resultado-importacao-texto"></p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="col-md-6">
+          <div class="card h-100">
+            <div class="card-header bg-light">
+              <h5 class="mb-0">Exportar Transações</h5>
+            </div>
+            <div class="card-body">
+              <form id="form-exportar">
+                <div class="mb-3">
+                  <label class="form-label">Período</label>
+                  <div class="row g-2">
+                    <div class="col-md-6">
+                      <input type="date" class="form-control" id="export-data-inicio" placeholder="Data Início">
+                    </div>
+                    <div class="col-md-6">
+                      <input type="date" class="form-control" id="export-data-fim" placeholder="Data Fim">
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="mb-3">
+                  <label class="form-label">Filtros</label>
+                  <div class="row g-2">
+                    <div class="col-md-6">
+                      <select class="form-select" id="export-categoria">
+                        <option value="">Todas as categorias</option>
+                      </select>
+                    </div>
+                    <div class="col-md-6">
+                      <select class="form-select" id="export-tipo">
+                        <option value="">Todos os tipos</option>
+                        <option value="ENTRADA">Apenas entradas</option>
+                        <option value="SAIDA">Apenas saídas</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="mb-3">
+                  <label class="form-label">Colunas a exportar</label>
+                  <div>
+                    <div class="form-check form-check-inline">
+                      <input class="form-check-input" type="checkbox" id="col-data" value="data" checked>
+                      <label class="form-check-label" for="col-data">Data</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                      <input class="form-check-input" type="checkbox" id="col-descricao" value="descricao" checked>
+                      <label class="form-check-label" for="col-descricao">Descrição</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                      <input class="form-check-input" type="checkbox" id="col-valor" value="valor" checked>
+                      <label class="form-check-label" for="col-valor">Valor</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                      <input class="form-check-input" type="checkbox" id="col-tipo" value="tipo" checked>
+                      <label class="form-check-label" for="col-tipo">Tipo</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                      <input class="form-check-input" type="checkbox" id="col-categoria" value="categoria_nome" checked>
+                      <label class="form-check-label" for="col-categoria">Categoria</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                      <input class="form-check-input" type="checkbox" id="col-notas" value="notas">
+                      <label class="form-check-label" for="col-notas">Notas</label>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="d-grid">
+                  <button type="submit" class="btn btn-primary" id="btn-exportar">
+                    <i class="bi bi-download"></i> Exportar
+                  </button>
+                </div>
+              </form>
+              
+              <div id="resultado-exportacao" class="mt-3 d-none">
+                <div class="alert alert-success">
+                  <h6>Exportação concluída</h6>
+                  <p id="resultado-exportacao-texto"></p>
+                  <a href="#" id="link-download" class="btn btn-sm btn-primary">Baixar arquivo</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Banco de Dados -->
+    <div id="section-db" class="content-section d-none">
+      <div class="row mb-4">
+        <div class="col">
+          <h2>Acesso ao Banco de Dados</h2>
+          <hr>
+        </div>
+      </div>
+      
+      <div class="card mb-4">
+        <div class="card-header bg-light">
+          <h5 class="mb-0">Consulta SQL</h5>
+        </div>
+        <div class="card-body">
+          <form id="form-sql">
+            <div class="mb-3">
+              <label class="form-label">Digite sua consulta SQL:</label>
+              <textarea class="form-control" id="sql-query" rows="5" placeholder="SELECT * FROM transacoes LIMIT 10"></textarea>
+              <div class="form-text">Atenção: Operações destrutivas (DROP, TRUNCATE) são bloqueadas.</div>
+            </div>
+            <button type="submit" class="btn btn-primary">Executar</button>
+          </form>
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="card-header bg-light">
+          <h5 class="mb-0">Resultado</h5>
+        </div>
+        <div class="card-body">
+          <div id="sql-result">
+            <div class="text-center py-4 text-muted">
+              <i class="bi bi-database"></i> Execute uma consulta para ver os resultados.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Modal Nova Transação -->
+  <div class="modal fade" id="modal-transacao" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="modal-transacao-titulo">Nova Transação</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form id="form-transacao">
+            <input type="hidden" id="transacao-id">
+            <div class="row mb-3">
+              <div class="col-md-8">
+                <label class="form-label">Descrição</label>
+                <input type="text" class="form-control" id="transacao-descricao" required>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Data</label>
+                <input type="date" class="form-control" id="transacao-data" required>
+              </div>
+            </div>
+            
+            <div class="row mb-3">
+              <div class="col-md-4">
+                <label class="form-label">Valor</label>
+                <input type="number" class="form-control" id="transacao-valor" step="0.01" min="0.01" required>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Tipo</label>
+                <select class="form-select" id="transacao-tipo" required>
+                  <option value="ENTRADA">Entrada</option>
+                  <option value="SAIDA">Saída</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Categoria</label>
+                <div class="input-group">
+                  <select class="form-select" id="transacao-categoria">
+                    <option value="">Selecione...</option>
+                  </select>
+                  <button class="btn btn-outline-secondary" type="button" id="btn-add-categoria">
+                    <i class="bi bi-plus"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            <div class="mb-3">
+              <label class="form-label">Notas</label>
+              <textarea class="form-control" id="transacao-notas" rows="3"></textarea>
+            </div>
+            
+            <div class="mb-3">
+              <label class="form-label">Anexos</label>
+              <input type="file" class="form-control" id="transacao-anexo">
+            </div>
+            
+            <div id="anexos-container" class="d-none mb-3">
+              <label class="form-label">Anexos existentes</label>
+              <div class="list-group" id="lista-anexos">
+                <!-- Será preenchido via JavaScript -->
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-primary" id="btn-salvar-transacao">Salvar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Modal Nova Categoria -->
+  <div class="modal fade" id="modal-categoria" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="modal-categoria-titulo">Nova Categoria</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form id="form-categoria">
+            <input type="hidden" id="categoria-id">
+            <div class="mb-3">
+              <label class="form-label">Nome</label>
+              <input type="text" class="form-control" id="categoria-nome" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Cor</label>
+              <input type="color" class="form-control form-control-color" id="categoria-cor" value="#3498db">
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-primary" id="btn-salvar-categoria">Salvar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="/js/main.js"></script>
+</body>
+</html>
