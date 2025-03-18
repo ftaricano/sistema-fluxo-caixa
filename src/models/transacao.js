@@ -1,196 +1,172 @@
-const db = require('../database/db');
-
+// src/models/transacao.js
 class Transacao {
-  // Criar nova transação
-  static criar(descricao, valor, data, tipo, categoria_id, notas) {
-    return new Promise((resolve, reject) => {
-      const sql = 'INSERT INTO transacoes (descricao, valor, data, tipo, categoria_id, notas) VALUES (?, ?, ?, ?, ?, ?)';
-      
-      db.run(sql, [descricao, valor, data, tipo, categoria_id, notas], function(err) {
-        if (err) {
-          return reject(err);
-        }
-        
-        resolve({
-          id: this.lastID,
-          descricao,
-          valor,
-          data,
-          tipo,
-          categoria_id,
-          notas
+    constructor(db) {
+        this.db = db;
+    }
+
+    async listar(filtros = {}) {
+        return new Promise((resolve, reject) => {
+            let query = 'SELECT * FROM transacoes';
+            const params = [];
+            
+            // Construir a parte WHERE da query com base nos filtros
+            const condicoes = [];
+            
+            if (filtros.tipo) {
+                condicoes.push('tipo = ?');
+                params.push(filtros.tipo);
+            }
+            
+            if (filtros.dataInicio) {
+                condicoes.push('data >= ?');
+                params.push(filtros.dataInicio);
+            }
+            
+            if (filtros.dataFim) {
+                condicoes.push('data <= ?');
+                params.push(filtros.dataFim);
+            }
+            
+            if (filtros.categoriaId) {
+                condicoes.push('categoria_id = ?');
+                params.push(filtros.categoriaId);
+            }
+            
+            if (filtros.descricao) {
+                condicoes.push('descricao LIKE ?');
+                params.push(`%${filtros.descricao}%`);
+            }
+            
+            if (condicoes.length > 0) {
+                query += ' WHERE ' + condicoes.join(' AND ');
+            }
+            
+            // Ordenação e limite
+            query += ' ORDER BY data DESC, id DESC';
+            
+            this.db.all(query, params, (err, rows) => {
+                if (err) reject(err);
+                else resolve(rows);
+            });
         });
-      });
-    });
-  }
-
-  // Listar todas as transações com filtros
-  static listar(filtros = {}) {
-    return new Promise((resolve, reject) => {
-      let sql = `
-        SELECT t.*, c.nome as categoria_nome, c.cor_hex 
-        FROM transacoes t
-        LEFT JOIN categorias c ON t.categoria_id = c.id
-        WHERE 1=1
-      `;
-      
-      const params = [];
-      
-      // Aplicar filtros
-      if (filtros.dataInicio) {
-        sql += ' AND t.data >= ?';
-        params.push(filtros.dataInicio);
-      }
-      
-      if (filtros.dataFim) {
-        sql += ' AND t.data <= ?';
-        params.push(filtros.dataFim);
-      }
-      
-      if (filtros.tipo) {
-        sql += ' AND t.tipo = ?';
-        params.push(filtros.tipo);
-      }
-      
-      if (filtros.categoria_id) {
-        sql += ' AND t.categoria_id = ?';
-        params.push(filtros.categoria_id);
-      }
-      
-      if (filtros.busca) {
-        sql += ' AND t.descricao LIKE ?';
-        params.push(`%${filtros.busca}%`);
-      }
-      
-      // Ordenação
-      sql += ' ORDER BY t.data DESC, t.id DESC';
-      
-      // Executar consulta
-      db.all(sql, params, (err, rows) => {
-        if (err) {
-          return reject(err);
-        }
-        
-        // Calcular totais
-        const totais = {
-          entradas: 0,
-          saidas: 0,
-          saldo: 0
-        };
-        
-        rows.forEach(row => {
-          if (row.tipo === 'ENTRADA') {
-            totais.entradas += row.valor;
-          } else {
-            totais.saidas += row.valor;
-          }
+    }
+    
+    async listarPorPeriodo(dataInicio, dataFim) {
+        return new Promise((resolve, reject) => {
+            this.db.all(
+                `SELECT * FROM transacoes 
+                 WHERE data >= ? AND data <= ?
+                 ORDER BY data DESC`,
+                [dataInicio, dataFim],
+                (err, rows) => {
+                    if (err) reject(err);
+                    else resolve(rows);
+                }
+            );
         });
-        
-        totais.saldo = totais.entradas - totais.saidas;
-        
-        resolve({
-          transacoes: rows,
-          totais
+    }
+
+    async obterPorId(id) {
+        return new Promise((resolve, reject) => {
+            this.db.get('SELECT * FROM transacoes WHERE id = ?', [id], (err, row) => {
+                if (err) reject(err);
+                else resolve(row);
+            });
         });
-      });
-    });
-  }
+    }
 
-  // Buscar transação por ID
-  static buscarPorId(id) {
-    return new Promise((resolve, reject) => {
-      const sql = `
-        SELECT t.*, c.nome as categoria_nome, c.cor_hex 
-        FROM transacoes t
-        LEFT JOIN categorias c ON t.categoria_id = c.id
-        WHERE t.id = ?
-      `;
-      
-      db.get(sql, [id], (err, row) => {
-        if (err) {
-          return reject(err);
-        }
-        
-        resolve(row);
-      });
-    });
-  }
-
-  // Atualizar transação
-  static atualizar(id, descricao, valor, data, tipo, categoria_id, notas) {
-    return new Promise((resolve, reject) => {
-      const sql = `
-        UPDATE transacoes 
-        SET descricao = ?, valor = ?, data = ?, tipo = ?, categoria_id = ?, notas = ?
-        WHERE id = ?
-      `;
-      
-      db.run(sql, [descricao, valor, data, tipo, categoria_id, notas, id], function(err) {
-        if (err) {
-          return reject(err);
-        }
-        
-        if (this.changes === 0) {
-          return reject(new Error('Transação não encontrada'));
-        }
-        
-        resolve({
-          id,
-          descricao,
-          valor,
-          data,
-          tipo,
-          categoria_id,
-          notas,
-          updated: true
+    async criar(transacao) {
+        return new Promise((resolve, reject) => {
+            // Validar os campos obrigatórios
+            if (!transacao.data || !transacao.valor || !transacao.tipo) {
+                return reject(new Error('Data, valor e tipo são obrigatórios'));
+            }
+            
+            // Validar o tipo
+            if (transacao.tipo !== 'receita' && transacao.tipo !== 'despesa') {
+                return reject(new Error('Tipo inválido. Use "receita" ou "despesa"'));
+            }
+            
+            // Validar valor
+            const valor = parseFloat(transacao.valor);
+            if (isNaN(valor) || valor <= 0) {
+                return reject(new Error('Valor deve ser um número positivo'));
+            }
+            
+            // Inserir a transação
+            this.db.run(
+                `INSERT INTO transacoes (data, descricao, valor, tipo, categoria_id) 
+                 VALUES (?, ?, ?, ?, ?)`,
+                [
+                    transacao.data,
+                    transacao.descricao || '',
+                    transacao.valor,
+                    transacao.tipo,
+                    transacao.categoria_id || null
+                ],
+                function(err) {
+                    if (err) reject(err);
+                    else resolve({ id: this.lastID, ...transacao });
+                }
+            );
         });
-      });
-    });
-  }
+    }
 
-  // Remover transação
-  static remover(id) {
-    return new Promise((resolve, reject) => {
-      const sql = 'DELETE FROM transacoes WHERE id = ?';
-      
-      db.run(sql, [id], function(err) {
-        if (err) {
-          return reject(err);
-        }
-        
-        if (this.changes === 0) {
-          return reject(new Error('Transação não encontrada'));
-        }
-        
-        resolve({ removed: true });
-      });
-    });
-  }
+    async atualizar(id, transacao) {
+        return new Promise((resolve, reject) => {
+            // Validar os campos obrigatórios
+            if (!transacao.data || !transacao.valor || !transacao.tipo) {
+                return reject(new Error('Data, valor e tipo são obrigatórios'));
+            }
+            
+            // Validar o tipo
+            if (transacao.tipo !== 'receita' && transacao.tipo !== 'despesa') {
+                return reject(new Error('Tipo inválido. Use "receita" ou "despesa"'));
+            }
+            
+            // Validar valor
+            const valor = parseFloat(transacao.valor);
+            if (isNaN(valor) || valor <= 0) {
+                return reject(new Error('Valor deve ser um número positivo'));
+            }
+            
+            // Atualizar a transação
+            this.db.run(
+                `UPDATE transacoes 
+                 SET data = ?, descricao = ?, valor = ?, tipo = ?, categoria_id = ?
+                 WHERE id = ?`,
+                [
+                    transacao.data,
+                    transacao.descricao || '',
+                    transacao.valor,
+                    transacao.tipo,
+                    transacao.categoria_id || null,
+                    id
+                ],
+                function(err) {
+                    if (err) reject(err);
+                    else if (this.changes === 0) {
+                        reject(new Error('Transação não encontrada'));
+                    } else {
+                        resolve({ id, ...transacao });
+                    }
+                }
+            );
+        });
+    }
 
-  // Obter resumo por período
-  static resumoPorPeriodo(dataInicio, dataFim) {
-    return new Promise((resolve, reject) => {
-      const sql = `
-        SELECT 
-          strftime('%Y-%m', data) as periodo,
-          SUM(CASE WHEN tipo = 'ENTRADA' THEN valor ELSE 0 END) as total_entradas,
-          SUM(CASE WHEN tipo = 'SAIDA' THEN valor ELSE 0 END) as total_saidas,
-          SUM(CASE WHEN tipo = 'ENTRADA' THEN valor ELSE -valor END) as saldo
-        FROM transacoes
-        WHERE data BETWEEN ? AND ?
-        GROUP BY periodo
-        ORDER BY periodo
-      `;
-      
-      db.all(sql, [dataInicio, dataFim], (err, rows) => {
-        if (err) {
-          return reject(err);
-        }
-        
-        resolve(rows);
-      });
-    });
-  }
+    async remover(id) {
+        return new Promise((resolve, reject) => {
+            this.db.run('DELETE FROM transacoes WHERE id = ?', [id], function(err) {
+                if (err) reject(err);
+                else if (this.changes === 0) {
+                    reject(new Error('Transação não encontrada'));
+                } else {
+                    resolve({ message: 'Transação removida com sucesso' });
+                }
+            });
+        });
+    }
 }
 
 module.exports = Transacao;

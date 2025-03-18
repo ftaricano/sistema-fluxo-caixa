@@ -1,97 +1,120 @@
-const db = require('../database/db');
-
+// src/models/categoria.js
 class Categoria {
-  // Criar nova categoria
-  static criar(nome, cor_hex, usuario_id = null) {
-    return new Promise((resolve, reject) => {
-      const sql = 'INSERT INTO categorias (nome, cor_hex, usuario_id) VALUES (?, ?, ?)';
-      
-      db.run(sql, [nome, cor_hex || '#666666', usuario_id], function(err) {
-        if (err) {
-          return reject(err);
-        }
-        
-        resolve({
-          id: this.lastID,
-          nome,
-          cor_hex,
-          usuario_id
-        });
-      });
-    });
+  constructor(db) {
+      this.db = db;
   }
 
-  // Listar todas as categorias de um usuário
-  static listarPorUsuario(usuario_id) {
-    return new Promise((resolve, reject) => {
-      const sql = 'SELECT * FROM categorias WHERE usuario_id = ? ORDER BY nome';
-      
-      db.all(sql, [usuario_id], (err, rows) => {
-        if (err) {
-          return reject(err);
-        }
-        
-        resolve(rows);
+  async listar() {
+      return new Promise((resolve, reject) => {
+          this.db.all('SELECT * FROM categorias ORDER BY nome', [], (err, rows) => {
+              if (err) reject(err);
+              else resolve(rows);
+          });
       });
-    });
   }
 
-  // Atualizar categoria
-  static atualizar(id, nome, cor_hex) {
-    return new Promise((resolve, reject) => {
-      const sql = 'UPDATE categorias SET nome = ?, cor_hex = ? WHERE id = ?';
-      
-      db.run(sql, [nome, cor_hex, id], function(err) {
-        if (err) {
-          return reject(err);
-        }
-        
-        if (this.changes === 0) {
-          return reject(new Error('Categoria não encontrada'));
-        }
-        
-        resolve({
-          id,
-          nome,
-          cor_hex,
-          updated: true
-        });
+  async obterPorId(id) {
+      return new Promise((resolve, reject) => {
+          this.db.get('SELECT * FROM categorias WHERE id = ?', [id], (err, row) => {
+              if (err) reject(err);
+              else resolve(row);
+          });
       });
-    });
   }
 
-  // Remover categoria
-  static remover(id) {
-    return new Promise((resolve, reject) => {
-      const sql = 'DELETE FROM categorias WHERE id = ?';
-      
-      db.run(sql, [id], function(err) {
-        if (err) {
-          return reject(err);
-        }
-        
-        if (this.changes === 0) {
-          return reject(new Error('Categoria não encontrada'));
-        }
-        
-        resolve({ removed: true });
+  async criar(categoria) {
+      return new Promise((resolve, reject) => {
+          // Verifica se já existe uma categoria com o mesmo nome
+          this.db.get(
+              'SELECT * FROM categorias WHERE nome = ?',
+              [categoria.nome],
+              (err, row) => {
+                  if (err) {
+                      reject(err);
+                  } else if (row) {
+                      reject(new Error('Já existe uma categoria com este nome'));
+                  } else {
+                      // Insere a nova categoria
+                      this.db.run(
+                          'INSERT INTO categorias (nome, descricao) VALUES (?, ?)',
+                          [categoria.nome, categoria.descricao || ''],
+                          function(err) {
+                              if (err) reject(err);
+                              else resolve({ id: this.lastID, ...categoria });
+                          }
+                      );
+                  }
+              }
+          );
       });
-    });
   }
 
-  // Buscar categoria por ID
-  static buscarPorId(id) {
-    return new Promise((resolve, reject) => {
-      const sql = 'SELECT * FROM categorias WHERE id = ?';
-      
-      db.get(sql, [id], (err, row) => {
-        if (err) {
-          return reject(err);
-        }
-        
-        resolve(row);
+  async atualizar(id, categoria) {
+      return new Promise((resolve, reject) => {
+          // Verifica se já existe outra categoria com o mesmo nome
+          this.db.get(
+              'SELECT * FROM categorias WHERE nome = ? AND id != ?',
+              [categoria.nome, id],
+              (err, row) => {
+                  if (err) {
+                      reject(err);
+                  } else if (row) {
+                      reject(new Error('Já existe outra categoria com este nome'));
+                  } else {
+                      // Atualiza a categoria
+                      this.db.run(
+                          'UPDATE categorias SET nome = ?, descricao = ? WHERE id = ?',
+                          [categoria.nome, categoria.descricao || '', id],
+                          function(err) {
+                              if (err) reject(err);
+                              else if (this.changes === 0) {
+                                  reject(new Error('Categoria não encontrada'));
+                              } else {
+                                  resolve({ id, ...categoria });
+                              }
+                          }
+                      );
+                  }
+              }
+          );
       });
-    });
+  }
+
+  async verificarUsoEmTransacoes(id) {
+      return new Promise((resolve, reject) => {
+          this.db.get(
+              'SELECT COUNT(*) as total FROM transacoes WHERE categoria_id = ?',
+              [id],
+              (err, row) => {
+                  if (err) reject(err);
+                  else resolve(row.total > 0);
+              }
+          );
+      });
+  }
+  
+  async remover(id) {
+      // Verificar se a categoria está sendo usada
+      const emUso = await this.verificarUsoEmTransacoes(id);
+      
+      if (emUso) {
+          throw new Error('Não é possível remover categoria em uso por transações');
+      }
+      
+      return new Promise((resolve, reject) => {
+          this.db.run(
+              'DELETE FROM categorias WHERE id = ?',
+              [id],
+              function(err) {
+                  if (err) reject(err);
+                  else if (this.changes === 0) {
+                      reject(new Error('Categoria não encontrada'));
+                  } else {
+                      resolve({ message: 'Categoria removida com sucesso' });
+                  }
+              }
+          );
+      });
   }
 }
 
